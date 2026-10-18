@@ -2,21 +2,21 @@ name: Sync Aniverse (1 jam ringan)
 
 on:
   schedule:
-    - cron: "0 * * * *" # tiap jam 00 UTC = tiap jam WIB juga (jalan per jam)
-  workflow_dispatch: # biar bisa klik Run manual di tab Actions
+    - cron: "0 * * * *" # tiap jam 00 UTC = tiap jam WIB
+  workflow_dispatch: # biar bisa Run manual di tab Actions
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Install deps
@@ -24,6 +24,12 @@ jobs:
 
       - name: Generate Prisma
         run: npx prisma generate
+
+      - name: Check env (aman tanpa bocorin secret)
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "::error::DATABASE_URL secret kosong — isi di Settings → Secrets → Actions"; exit 1; fi
+          echo "DATABASE_URL: OK ($(echo -n "${{ secrets.DATABASE_URL }}" | wc -c) chars)"
+          echo "CRON_SECRET: $([ -n "${{ secrets.CRON_SECRET }}" ] && echo OK || echo kosong-opsional)"
 
       - name: Build
         run: npm run build
@@ -34,3 +40,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OTAKUDESU_BASE_URL: https://otakudesu.blog/
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # cegah prisma pakai .env yang gak ada di runner
+          NODE_ENV: production
+
+      - name: Done
+        if: always()
+        run: echo "Selesai — cek log di atas: scanned/checked/skipped"
