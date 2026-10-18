@@ -1,0 +1,36 @@
+name: Sync Aniverse (1 jam ringan)
+
+on:
+  schedule:
+    - cron: "0 * * * *" # tiap jam 00 UTC = tiap jam WIB juga (jalan per jam)
+  workflow_dispatch: # biar bisa klik Run manual di tab Actions
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Generate Prisma
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Sync 25 terbaru (standalone ke otakudesu.blog)
+        run: node dist/index.js --once --window=60 --limit=25
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OTAKUDESU_BASE_URL: https://otakudesu.blog/
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
