@@ -2,47 +2,32 @@ name: Sync Aniverse (1 jam ringan)
 
 on:
   schedule:
-    - cron: "0 * * * *" # tiap jam 00 UTC = tiap jam WIB
-  workflow_dispatch: # biar bisa Run manual di tab Actions
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: "npm"
-
-      - name: Install deps
-        run: npm ci
-
-      - name: Generate Prisma
-        run: npx prisma generate
-
-      - name: Check env (aman tanpa bocorin secret)
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Check env
         run: |
-          if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "::error::DATABASE_URL secret kosong — isi di Settings → Secrets → Actions"; exit 1; fi
-          echo "DATABASE_URL: OK ($(echo -n "${{ secrets.DATABASE_URL }}" | wc -c) chars)"
-          echo "CRON_SECRET: $([ -n "${{ secrets.CRON_SECRET }}" ] && echo OK || echo kosong-opsional)"
-
-      - name: Build
-        run: npm run build
-
-      - name: Sync 25 terbaru (standalone ke otakudesu.blog)
-        run: node dist/index.js --once --window=60 --limit=25
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "::error::DATABASE_URL kosong — Settings → Secrets → Actions → New repository secret DATABASE_URL"; exit 1; fi
+          echo "DATABASE_URL OK ($(echo -n "${{ secrets.DATABASE_URL }}" | wc -c) chars)"
+      - run: npm run build
+      - name: Sync 25 terbaru
+        run: |
+          echo "Start sync 25..."
+          node dist/index.js --once --window=60 --limit=25
+          echo "Exit code: $?"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OTAKUDESU_BASE_URL: https://otakudesu.blog/
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          # cegah prisma pakai .env yang gak ada di runner
-          NODE_ENV: production
-
-      - name: Done
-        if: always()
-        run: echo "Selesai — cek log di atas: scanned/checked/skipped"
