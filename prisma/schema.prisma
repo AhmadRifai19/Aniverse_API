@@ -1,0 +1,132 @@
+// Schema Prisma - AniVerse Anime Streaming
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+model User {
+  id              String          @id @default(cuid())
+  username        String          @unique
+  email           String          @unique
+  password        String
+  role            Role            @default(USER)
+  avatar          String?
+  bio             String?         @default("")
+  watchlist       String[]        @default([])
+  notifEpisode    Boolean         @default(true)
+  notifWatchlist  Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  watchProgress   WatchProgress[]
+  comments        Comment[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+}
+
+model Anime {
+  id            Int             @id @default(autoincrement())
+  mal_id        Int             @unique
+  title         String
+  image_url     String
+  synopsis      String?         @db.Text
+  score         Float?
+  status        String?
+  genres        String[]        @default([])
+  studio        String?
+  year          Int?
+  type          String?         @default("TV")
+  featured      Boolean         @default(false)
+  episodes      Episode[]
+  watchProgress WatchProgress[]
+  comments      Comment[]
+  notifications Notification[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Episode {
+  id         Int      @id @default(autoincrement())
+  animeId    Int
+  title      String
+  episode_no Int
+  video_url  String?
+  slug       String?  @unique
+  anime      Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model WatchProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  animeId     Int
+  episodeNo   Int      @default(1)
+  progress    Int      @default(0)
+  currentTime Int      @default(0)
+  duration    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime       Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  @@unique([userId, animeId])
+  @@index([userId, updatedAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  animeId   Int
+  episodeNo Int
+  content   String   @db.VarChar(100)
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  @@index([animeId, episodeNo, createdAt])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  animeId   Int?
+  type      String   @default("NEW_EPISODE")
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime     Anime?   @relation(fields: [animeId], references: [id], onDelete: SetNull)
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  username   String?
+  action     String
+  targetType String?
+  targetId   String?
+  detail     String?  @db.Text
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+}

@@ -1,0 +1,25 @@
+{
+  "name": "versi-ringan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sync ringan 30 menit window 60 menit — update bukan ganti, tanpa ubah scraping lama",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "sync": "tsx src/index.ts --once",
+    "sync:dry": "tsx src/index.ts --dry-run --limit=5",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.13",
+    "prisma": "^6.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.3"
+  }
+}
